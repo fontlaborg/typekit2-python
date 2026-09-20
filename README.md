@@ -1,148 +1,137 @@
-typekit-python
-==============
+---
+this_file: README.md
+---
 
-This is a Python module that implements the Typekit developers API. It allows you to create, retrieve, delete, update, and publish Typekit kits in Python. You can also get information about a font family and the possible variations of a given font family. It now supports adding and removing font from a kit.
+# typekit2
 
-Read the source code if the documentation below isn't enough. It has okay high-level comments for each method.
+`typekit2` is a modern Python client and Fire CLI for the Adobe Fonts API formerly known as the Typekit API.
 
-## Usage
+It replaces the abandoned `typekit` package’s Python 2 code and `setup.py` packaging with Python 3.10+, `pyproject.toml`, HTTPS header authentication, `.env` support, offline tests, and Git-tag-derived versions.
 
-Install the library using pip:
+## Install
 
-```
-pip install typekit
-```
-
-Initialize the client with your developer API token. You can get your API token [here](https://typekit.com/account/tokens). All method calls return the JSON representation of the return from calling the Typekit API.
-
-```
-from typekit import Typekit
-
-tk = Typekit(api_token='<API token>')
-```
-### List kits
-
-To list all your kits, use the following command:
-
-```
-tk.list_kits()
+```bash
+uv add typekit2
 ```
 
-### Get kit
+For local development:
 
-To get information about a specific kit, input the kit id as the argument:
-
-```
-tk.get_kit(kit_id='<kit_id>')
+```bash
+uv sync
 ```
 
-### Create kit
+Create `.env` from the supplied example, or export the key directly:
 
-To create a new kit, use the method `create_kit(name, domains, families=None, badge=False)`. `Name` and `domains` fields are required, but the `families` and `badge` fields are not.
-
-The arguments are in the following format:
-- **name**: string
-- **domains**: string of format 'localhost, http://domain.com, 127.0.0.1' or a Python list of strings of format ['localhost', 'http://domain.com', '127.0.0.1']
-- **families**: list of dictionaries with the following key : values
-  - 'id' : font family id (string)
-  - (optional) 'variations' : comma separated variations (string).
-
-An example of the families format is: `families = [{'id': 'ftnk', 'variations': 'n3,n4'}, {'id': 'pcpv', 'variations': 'n4'}]` in which case we would create a kit with the font families Futura-PT and Droid Sans with font variations normal 3 (font-weight:300 and not italicized or strong), normal 4 and normal 4, respectively.
-
-Example usage:
-
-```
-name = 'example typekit kit'
-domains = ['localhost', 'http://domain.com']
-families = [{'id': 'ftnk', 'variations': 'n3,n4'}, {'id': 'pcpv', 'variations': 'n4'}]
-
-tk.create_kit(name, domains, families)
+```bash
+cp .env.example .env
+export TYPEKIT_API_KEY='your-token'
 ```
 
-### Update kit
+`python-dotenv` loads `.env` without overriding an existing environment variable. Never commit `.env`; it is ignored.
 
-To create a new kit, use the method `update_kit(kit_id, name=None, domains=None, families=None, badge=False)`. The only required field is `kit_id`. `Name`, `domains`, `families` and `badge` fields are not required.
+## Python API
 
-Field formats are the same as `create_kit`.
+```python
+from typekit2 import Typekit
 
-Example usage:
+client = Typekit()  # reads TYPEKIT_API_KEY
 
-```
-tk.update_kit(kit_id='<kit_id>', name='new name', badge='true')
-```
-
-### Remove kit
-
-To remove a kit, use the method `remove_kit(kit_id)`. The `kit_id` field is required.
-
-```
-tk.remove_kit(kit_id='<kit_id>')
+kits = client.list_kits()
+family = client.get_font_family("pcpv")
+variations = client.get_font_variations("pcpv")
+library = client.get_library("full", page=1, per_page=50)
 ```
 
-### Publish kit
+An explicit key is also supported:
 
-To publish a kit, use the method `publish_kit(kit_id)`. The `kit_id` field is required.
-```
-tk.publish_kit(kit_id='<kit_id>')
-```
-
-### Get font family
-
-To retrieve information regarding a given font family, use the method `get_font_family(font)`. The argument `font` is a string and can be a Typekit font id or a slug of the font as named in Typekit. The method does not slugify the input, so make sure to slugify it before entering the argument.
-
-```
-tk.get_font_family('<font_id>')
+```python
+client = Typekit(api_key="...")
 ```
 
-### Get font variations
+The compatibility keyword `api_token=` is accepted, but new code should use `api_key=` or `TYPEKIT_API_KEY`.
 
-To retrieve all possible variations of a given font, use the method `get_font_variations(font)`. The argument is the same as for `get_font_family(font)`. This method returns a Python list of all possible variations of the font.
+### Kit workflow
 
-```
-variations = tk.get_font_variations('futura-pt') # using font slug
+```python
+created = client.create_kit(
+    "Example",
+    ["example.com", "www.example.com"],
+    [{"id": "pcpv", "subset": "all", "variations": ["n4", "i4"]}],
+)
+kit_id = created["kit"]["id"]
 
-or
-
-variations = tk.get_font_variations('ftnk') # using font id
-
-OUTPUT:
-[u'n3', u'i3', u'n4', u'i4', u'n5', u'i5', u'n7', u'i7', u'n8', u'i8']
-
-```
-
-### Add font to kit
-
-To add font to kit, use the method `kit_add_font(kit_id, font, variations=None)`. Arguments for this method is the same format as the ones above, BUT variations should be in list. Returns nothing.
-
-```
-tk.kit_add_font('kit_id', 'futura-pt', [n3,n5,n7])
+client.update_kit(kit_id, name="Example renamed")
+client.add_font(kit_id, "gkmg", variations=["n4", "n7"])
+client.publish_kit(kit_id)
 ```
 
-### Remove font from kit
+Publishing is asynchronous. Adobe documents that CDN propagation may take several minutes.
 
-To add font to kit, use the method `kit_remove_font(kit_id, font)`. Arguments for this method is the same format as the ones above, BUT variations should be in list. Returns nothing.
+## CLI
 
+The installed `typekit2` command and `python -m typekit2` expose the same Fire CLI. Results are stable JSON.
+
+```bash
+typekit2 doctor
+typekit2 kits
+typekit2 kit abc123
+typekit2 kit abc123 --published=true
+typekit2 family pcpv
+typekit2 variations pcpv
+typekit2 libraries
+typekit2 library full --page=1 --per-page=50
 ```
-tk.kit_remove_font('kit_id', 'futura-pt')
+
+Mutating commands are explicit:
+
+```bash
+typekit2 create-kit Example --domains=example.com,www.example.com
+typekit2 add-font abc123 pcpv --variations=n4,i4 --subset=all
+typekit2 update-kit abc123 --name='Renamed kit'
+typekit2 publish-kit abc123
+typekit2 remove-font abc123 pcpv
+typekit2 remove-kit abc123
 ```
 
-### Other methods
+For `--families`, pass a JSON list:
 
-`get_kit_vals(kit_id)` - Retrieves kit vals in a list of format: [name, domains, families, badge]
+```bash
+typekit2 create-kit Example \
+  --domains=example.com \
+  --families='[{"id":"pcpv","subset":"all","variations":["n4","i4"]}]'
+```
 
-`get_kit_fonts(kit_id)` - Retrieves a list of font ids in a given kit
+Run `typekit2 --help` or `python -m typekit2 --help` for generated Fire help.
 
-`kit_contains_font(kit_id, font)` - Checks to see if a font exists in a kit.
+## API behavior
 
+- Requests use `https://typekit.com/api/v1/json`.
+- Authentication uses the documented `X-Typekit-Token` header; keys never enter URLs or CLI output.
+- Kit writes use URL-encoded Rails-style nested parameters.
+- A 30-second timeout is applied by default and can be changed with `Typekit(timeout=...)`.
+- HTTP, JSON, and documented API errors raise `TypekitAPIError`.
+- `update_kit` sends only supplied fields; omitted fields are not replaced accidentally.
 
+See [docs/API.md](docs/API.md) for the method-to-endpoint map and links to Adobe’s authoritative documentation.
 
-## Licence
+## Development
 
-MIT Licence
+```bash
+./test.sh
+```
 
+The suite is offline: it uses request doubles and never creates, publishes, or deletes a real kit.
 
+## Releases
 
+Versions come from Git tags through `hatch-vcs`; generated `typekit2/__version__.py` is explicitly ignored. To validate, commit/tag/push the next semantic version, build fresh distributions, and publish with `uv`:
 
+```bash
+./publish.sh
+```
 
-Created by Jason Scott Heise
-Owned by Elon Musk
+Set `PUBLISH_SKIP_UPLOAD=1` to exercise the Git release and artifact verification flow without uploading to PyPI. `UV_PUBLISH_TOKEN` supplies a PyPI token when Trusted Publishing is unavailable.
+
+## License and provenance
+
+MIT. The project began as `typekit-python` by Suchan Lee; `typekit2` is its Python 3 modernization.

@@ -1,6 +1,12 @@
+# this_file: .gitignore
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+.DS_Store
+.env
+.venv/
+.codegraph/
+typekit2/__version__.py
 
 # C extensions
 *.so
@@ -31,6 +37,8 @@ htmlcov/
 .tox/
 .coverage
 .cache
+.pytest_cache/
+.ruff_cache/
 nosetests.xml
 coverage.xml
 
@@ -51,4 +59,3 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-
