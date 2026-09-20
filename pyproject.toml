@@ -29,7 +29,7 @@ classifiers = [
 
 [project.urls]
 Documentation = "https://fonts.adobe.com/docs/api"
-Repository = "https://github.com/fontlaborg/typekit-python"
+Repository = "https://github.com/fontlaborg/typekit2-python"
 
 [project.scripts]
 typekit2 = "typekit2.__main__:main"

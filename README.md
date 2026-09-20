@@ -27,6 +27,8 @@ cp .env.example .env
 export TYPEKIT_API_KEY='your-token'
 ```
 
+Create or copy the token from Adobe’s official [API Token page](https://fonts.adobe.com/account/tokens).
+
 `python-dotenv` loads `.env` without overriding an existing environment variable. Never commit `.env`; it is ignored.
 
 ## Python API
@@ -80,9 +82,26 @@ typekit2 family pcpv
 typekit2 variations pcpv
 typekit2 libraries
 typekit2 library full --page=1 --per-page=50
+typekit2 kit-fonts gav0zux --matching=halyard
 ```
 
-Mutating commands are explicit:
+### Safe batch removal
+
+Preview the exact slug/name/ID resolution and resulting family count without writing:
+
+```bash
+typekit2 plan-remove-fonts gav0zux halyard-display,halyard-micro,halyard-text
+```
+
+Apply the removal while proving every unrequested family ID remains, then publish:
+
+```bash
+typekit2 remove-fonts gav0zux halyard-display,halyard-micro,halyard-text --publish=true
+```
+
+The result reports the resolved IDs, before/after counts, preservation check, and publish status. Unknown names abort the whole operation before its first write. `--ignore-missing=true` makes reruns idempotent; `--dry-run=true` provides another preview path. A timed-out DELETE is reconciled against the draft before continuing, and a timed-out publish is reconciled against the published kit rather than retried blindly.
+
+Other mutating commands remain explicit:
 
 ```bash
 typekit2 create-kit Example --domains=example.com,www.example.com
@@ -102,6 +121,13 @@ typekit2 create-kit Example \
 ```
 
 Run `typekit2 --help` or `python -m typekit2 --help` for generated Fire help.
+
+All successful command results are JSON. Errors exit nonzero through Fire and never include the API key. For an API read not yet covered by a high-level command, use the authenticated read-only escape hatch:
+
+```bash
+typekit2 request-get families/pcpv
+typekit2 request-get libraries/full --params='{"page":2,"per_page":25}'
+```
 
 ## API behavior
 
@@ -135,3 +161,5 @@ Set `PUBLISH_SKIP_UPLOAD=1` to exercise the Git release and artifact verificatio
 ## License and provenance
 
 MIT. The project began as `typekit-python` by Suchan Lee; `typekit2` is its Python 3 modernization.
+
+Repository: [github.com/fontlaborg/typekit2-python](https://github.com/fontlaborg/typekit2-python)

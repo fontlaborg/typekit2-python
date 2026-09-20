@@ -98,14 +98,18 @@ class Typekit:
         *,
         data: FormData | None = None,
         params: Mapping[str, Any] | None = None,
+        timeout: float | None = None,
     ) -> dict[str, Any]:
         """Make an authenticated request and return the decoded JSON object."""
+        request_timeout = self.timeout if timeout is None else timeout
+        if request_timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
         kwargs: dict[str, Any] = {
             "headers": {
                 "User-Agent": f"typekit2/{__version__}",
                 "X-Typekit-Token": self.api_key,
             },
-            "timeout": self.timeout,
+            "timeout": request_timeout,
         }
         if data is not None:
             kwargs["data"] = data
@@ -184,9 +188,9 @@ class Typekit:
         """Delete a kit."""
         return self.request("DELETE", f"kits/{quote(kit_id, safe='')}")
 
-    def publish_kit(self, kit_id: str) -> dict[str, Any]:
+    def publish_kit(self, kit_id: str, *, timeout: float | None = None) -> dict[str, Any]:
         """Publish the current draft kit asynchronously."""
-        return self.request("POST", f"kits/{quote(kit_id, safe='')}/publish")
+        return self.request("POST", f"kits/{quote(kit_id, safe='')}/publish", timeout=timeout)
 
     def get_font_family(self, family: str) -> dict[str, Any]:
         """Return a font family by ID or slug."""

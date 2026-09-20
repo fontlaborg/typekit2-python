@@ -6,6 +6,7 @@ import json
 
 import pytest
 
+import typekit2.__main__ as cli_module
 from typekit2.__main__ import TypekitCLI, _serialize, parse_csv, parse_families
 
 
@@ -65,7 +66,7 @@ class FakeClient:
 
 def test_cli_commands_delegate_with_parsed_values(monkeypatch: pytest.MonkeyPatch) -> None:
     fake = FakeClient()
-    monkeypatch.setattr(TypekitCLI, "client", property(lambda _: fake))
+    monkeypatch.setattr(TypekitCLI, "_client", property(lambda _: fake))
     cli = TypekitCLI()
 
     assert cli.kits()["method"] == "list_kits"
@@ -83,3 +84,72 @@ def test_cli_commands_delegate_with_parsed_values(monkeypatch: pytest.MonkeyPatc
     assert cli.publish_kit("abc")["method"] == "publish_kit"
     assert cli.add_font("abc", "pcpv", "n4,i4")["args"][2] == ["n4", "i4"]
     assert cli.remove_font("abc", "pcpv")["method"] == "remove_font"
+
+
+def test_cli_uses_configured_timeout_and_exposes_batch_workflows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake = FakeClient()
+    monkeypatch.setattr("typekit2.__main__.Typekit", lambda timeout: (fake, timeout))
+    cli = TypekitCLI(timeout=75)
+
+    assert cli._client == (fake, 75)
+
+
+def test_cli_batch_commands_parse_and_delegate(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = FakeClient()
+    monkeypatch.setattr(TypekitCLI, "_client", property(lambda _: fake))
+    monkeypatch.setattr(
+        cli_module,
+        "kit_fonts",
+        lambda client, kit_id, **kwargs: {"client": client, "kit_id": kit_id, **kwargs},
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "plan_remove_fonts",
+        lambda client, kit_id, families: {"families": families},
+    )
+    monkeypatch.setattr(
+        cli_module,
+        "remove_fonts",
+        lambda client, kit_id, families, **kwargs: {"families": families, **kwargs},
+    )
+    cli = TypekitCLI()
+
+    assert cli.kit_fonts("abc", matching="halyard")["matching"] == "halyard"
+    assert cli.plan_remove_fonts("abc", "one,two")["families"] == ["one", "two"]
+    result = cli.remove_fonts("abc", "one,two", publish=True, publish_timeout=90)
+    assert result["families"] == ["one", "two"]
+    assert result["publish"] is True
+    assert result["publish_timeout"] == 90
+
+
+def test_cli_read_only_escape_hatch_parses_json_params(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = FakeClient()
+    monkeypatch.setattr(TypekitCLI, "_client", property(lambda _: fake))
+    cli = TypekitCLI()
+
+    result = cli.request_get("libraries/full", '{"page": 2}')
+
+    assert result["method"] == "request"
+    assert result["args"] == ("GET", "libraries/full")
+    assert result["kwargs"] == {"params": {"page": 2}}
+    with pytest.raises(ValueError, match="JSON object"):
+        cli.request_get("libraries/full", "[]")
+
+
+def test_main_exposes_command_instance_without_public_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = {}
+    monkeypatch.setattr(
+        cli_module.fire,
+        "Fire",
+        lambda component, **kwargs: captured.update(component=component, kwargs=kwargs),
+    )
+
+    cli_module.main()
+
+    assert isinstance(captured["component"], TypekitCLI)
+    assert not hasattr(captured["component"], "client")
+    assert captured["kwargs"]["name"] == "typekit2"

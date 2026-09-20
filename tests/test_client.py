@@ -217,3 +217,22 @@ def test_resource_methods_use_documented_paths_and_escaped_ids() -> None:
         "https://typekit.com/api/v1/json/kits/abc123",
     ]
     assert session.calls[4]["data"] == [("subset", "all"), ("variations", "n4")]
+
+
+def test_request_and_publish_allow_per_call_timeout() -> None:
+    session = FakeSession(FakeResponse({"published": "now"}))
+    client = Typekit(api_key="secret", session=session, timeout=7.5)
+
+    client.publish_kit("abc123", timeout=120)
+
+    assert session.calls[0]["timeout"] == 120
+
+
+def test_request_rejects_nonpositive_per_call_timeout_before_network() -> None:
+    session = FakeSession(FakeResponse({}))
+    client = Typekit(api_key="secret", session=session)
+
+    with pytest.raises(ValueError, match="greater than zero"):
+        client.request("GET", "kits", timeout=0)
+
+    assert session.calls == []

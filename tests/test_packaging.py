@@ -17,6 +17,9 @@ def test_pyproject_uses_typekit2_hatch_vcs_and_fire_entry_point() -> None:
     assert config["project"]["name"] == "typekit2"
     assert config["project"]["dynamic"] == ["version"]
     assert config["project"]["scripts"] == {"typekit2": "typekit2.__main__:main"}
+    assert config["project"]["urls"]["Repository"] == (
+        "https://github.com/fontlaborg/typekit2-python"
+    )
     assert config["tool"]["hatch"]["version"]["source"] == "vcs"
     assert (
         config["tool"]["hatch"]["build"]["hooks"]["vcs"]["version-file"]
