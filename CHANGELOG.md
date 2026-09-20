@@ -6,6 +6,11 @@ this_file: CHANGELOG.md
 
 ## Unreleased
 
+### Fixed
+
+- Rewrote the `v1.0.0` and `v1.0.1` commits to strip a stray carriage return from the author identity, which GitHub Desktop could not parse.
+- Ignored local `.omc/` agent state so `publish.sh` sees a clean tree.
+
 ### Changed
 
 - Updated project links for the renamed `fontlaborg/typekit2-python` repository.

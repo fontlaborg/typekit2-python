@@ -6,6 +6,7 @@ __pycache__/
 .env
 .venv/
 .codegraph/
+.omc/
 typekit2/__version__.py
 
 # C extensions
@@ -59,3 +60,4 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+/.omc
